@@ -3,10 +3,69 @@ import * as Switch from "@radix-ui/react-switch";
 import { Inter } from "next/font/google";
 import * as Checkbox from "@radix-ui/react-checkbox";
 import { CheckIcon } from "@radix-ui/react-icons";
+import { Chart } from "react-charts";
+import React from "react";
+
+type MyDatum = { date: Date; stars: number };
 
 const inter = Inter({ subsets: ["latin"] });
 
+type DailyStars = {
+  date: Date;
+
+  stars: number;
+};
+
+type Series = {
+  label: string;
+
+  data: DailyStars[];
+};
+
+const data: Series[] = [
+  {
+    label: "React Charts",
+
+    data: [
+      {
+        date: new Date(),
+
+        stars: 202123,
+      },
+    ],
+  },
+
+  {
+    label: "React Query",
+
+    data: [
+      {
+        date: new Date(),
+
+        stars: 10234230,
+      },
+    ],
+  },
+];
+
 export default function Home() {
+  const primaryAxis = React.useMemo(
+    (): AxisOptions<DailyStars> => ({
+      getValue: (datum) => datum.date,
+    }),
+
+    []
+  );
+
+  const secondaryAxes = React.useMemo(
+    (): AxisOptions<DailyStars>[] => [
+      {
+        getValue: (datum) => datum.stars,
+      },
+    ],
+
+    []
+  );
   return (
     <main
       className={`flex min-h-screen flex-col items-center justify-between p-4 ${inter.className} bg-background`}
@@ -21,10 +80,16 @@ export default function Home() {
             <h3 className="text-[32px] text-white font-black mb-8">
               Gráfico de Potência
             </h3>
-            <div className="bg-orange-700 w-full h-[200px]">
-              <h3 className="text-4xl text-white font-black mb-8 w-full">
-                Gráfico
-              </h3>
+            <div className="w-full h-[200px]">
+              <Chart
+                options={{
+                  data,
+
+                  primaryAxis,
+
+                  secondaryAxes,
+                }}
+              />
             </div>
           </div>
         </div>
@@ -34,10 +99,16 @@ export default function Home() {
             <h3 className="text-[32px] text-white font-black mb-8">
               Corrente Elétrica (A)
             </h3>
-            <div className="bg-orange-700 w-full h-[200px]">
-              <h3 className="text-[32px] text-white font-black mb-8 w-full">
-                Gráfico
-              </h3>
+            <div className="w-full h-[200px]">
+              <Chart
+                options={{
+                  data,
+
+                  primaryAxis,
+
+                  secondaryAxes,
+                }}
+              />
             </div>
           </div>
         </div>
@@ -47,10 +118,16 @@ export default function Home() {
             <h3 className="text-[32px] text-white font-black mb-8">
               Tensão (V)
             </h3>
-            <div className="bg-orange-700 w-full h-[200px]">
-              <h3 className="text-[32px] text-white font-black mb-8 w-full">
-                Gráfico
-              </h3>
+            <div className="w-full h-[200px]">
+              <Chart
+                options={{
+                  data,
+
+                  primaryAxis,
+
+                  secondaryAxes,
+                }}
+              />
             </div>
           </div>
         </div>
