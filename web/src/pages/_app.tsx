@@ -1,6 +1,7 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import { Inter } from "next/font/google";
+import '../styles/switch.css'
 
 const inter = Inter({
   subsets: ["latin"],
