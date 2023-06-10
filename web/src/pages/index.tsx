@@ -3,69 +3,128 @@ import * as Switch from "@radix-ui/react-switch";
 import { Inter } from "next/font/google";
 import * as Checkbox from "@radix-ui/react-checkbox";
 import { CheckIcon } from "@radix-ui/react-icons";
-import { Chart } from "react-charts";
-import React from "react";
+import { useState } from "react";
+import { api } from "../services/api";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+import { faker } from "@faker-js/faker";
 
-type MyDatum = { date: Date; stars: number };
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const inter = Inter({ subsets: ["latin"] });
 
-type DailyStars = {
-  date: Date;
+interface ChartData {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    fill: boolean;
+    backgroundColor: string;
+    borderColor: string;
+  }[];
+}
 
-  stars: number;
-};
-
-type Series = {
-  label: string;
-
-  data: DailyStars[];
-};
-
-const data: Series[] = [
-  {
-    label: "React Charts",
-
-    data: [
-      {
-        date: new Date(),
-
-        stars: 202123,
-      },
-    ],
+const options = {
+  responsive: true,
+  plugins: {
+    legend: {
+      position: "top" as const,
+    },
   },
-
-  {
-    label: "React Query",
-
-    data: [
-      {
-        date: new Date(),
-
-        stars: 10234230,
-      },
-    ],
-  },
-];
+};
 
 export default function Home() {
-  const primaryAxis = React.useMemo(
-    (): AxisOptions<DailyStars> => ({
-      getValue: (datum) => datum.date,
-    }),
+  const [isLoading, setIsLoading] = useState(false);
+  const [temp, setTemp] = useState("");
+  const [isRelayOn, setIsRelayOn] = useState(false);
 
-    []
-  );
+  async function handleGetRelay() {
+    try {
+      setIsLoading(true);
 
-  const secondaryAxes = React.useMemo(
-    (): AxisOptions<DailyStars>[] => [
+      const response = await api.get("/rele");
+
+      setIsRelayOn(response.data == "ON" ? true : false);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleGetTemperature() {
+    try {
+      setIsLoading(true);
+
+      const response = await api.get("/data");
+      const text = String(response.data);
+
+      setTemp(text);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const labels = ["15:34", "15:37", "15:39", "15:42", "15:45", "15:48"]
+
+  const powerData: ChartData = {
+    labels: labels,
+    datasets: [
       {
-        getValue: (datum) => datum.stars,
+        label: "Potência(W)",
+        data: labels.map(() => faker.number.int({ min: 0, max: 51 })),
+        fill: false,
+        backgroundColor: "#fff",
+        borderColor: "#1eddff",
       },
     ],
+  };
 
-    []
-  );
+  const currentData: ChartData = {
+    labels: labels,
+    datasets: [
+      {
+        label: "Corrente(A)",
+        data: labels.map(() => faker.number.int({ min: 0, max: 51 })),
+        fill: false,
+        backgroundColor: "#fff",
+        borderColor: "#ff1e1e",
+      },
+    ],
+  };
+
+  const voltageData: ChartData = {
+    labels: labels,
+    datasets: [
+      {
+        label: "Tensão(V)",
+        data: labels.map(() => faker.number.int({ min: 0, max: 51 })),
+        fill: false,
+        backgroundColor: "#fff",
+        borderColor: "#1eff3c",
+      },
+    ],
+  };
+
   return (
     <main
       className={`flex min-h-screen flex-col items-center justify-between p-4 ${inter.className} bg-background`}
@@ -80,17 +139,8 @@ export default function Home() {
             <h3 className="text-[32px] text-white font-black mb-8">
               Gráfico de Potência
             </h3>
-            <div className="w-full h-[200px]">
-              <Chart
-                options={{
-                  data,
-
-                  primaryAxis,
-
-                  secondaryAxes,
-                }}
-              />
-            </div>
+            <Line options={options} data={powerData} />
+            <div className="w-full h-[200px]"></div>
           </div>
         </div>
 
@@ -99,17 +149,8 @@ export default function Home() {
             <h3 className="text-[32px] text-white font-black mb-8">
               Corrente Elétrica (A)
             </h3>
-            <div className="w-full h-[200px]">
-              <Chart
-                options={{
-                  data,
-
-                  primaryAxis,
-
-                  secondaryAxes,
-                }}
-              />
-            </div>
+            <Line options={options} data={currentData} />
+            <div className="w-full h-[200px]"></div>
           </div>
         </div>
 
@@ -118,25 +159,17 @@ export default function Home() {
             <h3 className="text-[32px] text-white font-black mb-8">
               Tensão (V)
             </h3>
-            <div className="w-full h-[200px]">
-              <Chart
-                options={{
-                  data,
-
-                  primaryAxis,
-
-                  secondaryAxes,
-                }}
-              />
-            </div>
+            <Line options={options} data={voltageData} />
+            <div className="w-full h-[200px]"></div>
           </div>
         </div>
 
         <div className="w-[488px] h-96 bg-card-background rounded-lg">
-          <div className="p-5 w-full h-auto flex-row">
+          <div className="p-5 w-full h-auto">
             <h3 className="text-[32px] text-white font-black mb-8">
               Controles
             </h3>
+            <div className="flex-col flex items-center gap-4">
             <form
               className="mt-8 flex flex-col gap-4"
               onSubmit={() => {
@@ -149,16 +182,16 @@ export default function Home() {
                   name="value1"
                   id="value1"
                   type="text"
-                  placeholder="Valor 1"
+                  placeholder="Valor"
                   className="bg-zinc-900 py-3 px-4 rounded text-sm placeholder:text-zinc-500 w-3/4"
                 />
                 <button className="bg-zinc-500 px-5 h-12 rounded-md font-semibold hover:bg-zinc-600 w-1/4">
-                  Botão 2
+                  Enviar
                 </button>
               </div>
             </form>
-            <button className="bg-zinc-500 px-5 h-12 rounded-md font-semibold hover:bg-zinc-600">
-              Botão 3
+            <button className="bg-zinc-500 px-5 h-12 rounded-md font-semibold hover:bg-zinc-600 ">
+              Atualizar
             </button>
             <form>
               <div style={{ display: "flex", alignItems: "center" }}>
@@ -174,6 +207,7 @@ export default function Home() {
                 </Switch.Root>
               </div>
             </form>
+            </div>
           </div>
         </div>
       </div>
