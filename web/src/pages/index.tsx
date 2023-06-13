@@ -52,8 +52,11 @@ const options = {
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
-  const [temp, setTemp] = useState("");
+  const [data, setData] = useState([] as number[]);
   const [isRelayOn, setIsRelayOn] = useState(false);
+  const [powerArray, setPowerArray] = useState([] as number[]);
+  const [currentArray, setCurrentArray] = useState([] as number[]);
+  const [voltageArray, setVoltageArray] = useState([] as number[]);
 
   async function handleGetRelay() {
     try {
@@ -69,14 +72,19 @@ export default function Home() {
     }
   }
 
-  async function handleGetTemperature() {
+  async function handleGetData() {
     try {
       setIsLoading(true);
 
-      const response = await api.get("/data");
-      const text = String(response.data);
+      const response = await api.get("http://localhost:3333/data");
+      const data: number[] = response.data;
 
-      setTemp(text);
+      let newPowerArray: number[] = [...powerArray, data[0]];
+      setPowerArray(newPowerArray);
+      let newCurrentArray: number[] = [...currentArray, data[1]];
+      setCurrentArray(newCurrentArray);
+      let newVoltageArray: number[] = [...voltageArray, data[2]];
+      setVoltageArray(newVoltageArray);
     } catch (error) {
       console.log(error);
     } finally {
@@ -84,14 +92,14 @@ export default function Home() {
     }
   }
 
-  const labels = ["15:34", "15:37", "15:39", "15:42", "15:45", "15:48"]
+  const labels = ["15:34", "15:37", "15:39", "15:42", "15:45", "15:48"];
 
   const powerData: ChartData = {
     labels: labels,
     datasets: [
       {
         label: "Potência(W)",
-        data: labels.map(() => faker.number.int({ min: 0, max: 51 })),
+        data: powerArray,
         fill: false,
         backgroundColor: "#fff",
         borderColor: "#1eddff",
@@ -104,7 +112,7 @@ export default function Home() {
     datasets: [
       {
         label: "Corrente(A)",
-        data: labels.map(() => faker.number.int({ min: 0, max: 51 })),
+        data: currentArray,
         fill: false,
         backgroundColor: "#fff",
         borderColor: "#ff1e1e",
@@ -117,7 +125,7 @@ export default function Home() {
     datasets: [
       {
         label: "Tensão(V)",
-        data: labels.map(() => faker.number.int({ min: 0, max: 51 })),
+        data: voltageArray,
         fill: false,
         backgroundColor: "#fff",
         borderColor: "#1eff3c",
@@ -170,43 +178,50 @@ export default function Home() {
               Controles
             </h3>
             <div className="flex-col flex items-center gap-4">
-            <form
-              className="mt-8 flex flex-col gap-4"
-              onSubmit={() => {
-                console.log("submit");
-              }}
-            >
-              <div className="flex flex-row gap-2">
-                <label htmlFor="valor1"></label>
-                <input
-                  name="value1"
-                  id="value1"
-                  type="text"
-                  placeholder="Valor"
-                  className="bg-zinc-900 py-3 px-4 rounded text-sm placeholder:text-zinc-500 w-3/4"
-                />
-                <button className="bg-zinc-500 px-5 h-12 rounded-md font-semibold hover:bg-zinc-600 w-1/4">
-                  Enviar
-                </button>
-              </div>
-            </form>
-            <button className="bg-zinc-500 px-5 h-12 rounded-md font-semibold hover:bg-zinc-600 ">
-              Atualizar
-            </button>
-            <form>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <label
-                  className="Label"
-                  htmlFor="airplane-mode"
-                  style={{ paddingRight: 15 }}
-                >
-                  <p className="text-xl text-white font-bold">Status</p>
-                </label>
-                <Switch.Root className="SwitchRoot" id="airplane-mode">
-                  <Switch.Thumb className="SwitchThumb" />
-                </Switch.Root>
-              </div>
-            </form>
+              <form
+                className="mt-8 flex flex-col gap-4"
+                onSubmit={() => {
+                  console.log("submit");
+                }}
+              >
+                <div className="flex flex-row gap-2">
+                  <label htmlFor="valor1"></label>
+                  <input
+                    name="value1"
+                    id="value1"
+                    type="text"
+                    placeholder="Valor"
+                    className="bg-zinc-900 py-3 px-4 rounded text-sm placeholder:text-zinc-500 w-3/4"
+                  />
+                  <button className="bg-zinc-500 text-center px-5 h-12 rounded-md font-semibold hover:bg-zinc-600 w-1/4">
+                    Enviar
+                  </button>
+                </div>
+              </form>
+              <button
+                className="bg-zinc-500 px-5 h-12 rounded-md font-semibold hover:bg-zinc-600 "
+                onClick={handleGetData}
+              >
+                Atualizar
+              </button>
+              <form>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <label
+                    className="Label"
+                    htmlFor="airplane-mode"
+                    style={{ paddingRight: 15 }}
+                  >
+                    <p className="text-xl text-white font-bold">Status</p>
+                  </label>
+                  <Switch.Root
+                    className="SwitchRoot"
+                    id="airplane-mode"
+                    onChange={handleGetRelay}
+                  >
+                    <Switch.Thumb className="SwitchThumb" />
+                  </Switch.Root>
+                </div>
+              </form>
             </div>
           </div>
         </div>
