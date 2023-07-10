@@ -1,28 +1,29 @@
-#include <DHTesp.h>
-#include "heltec.h"
 #include <WiFi.h>
 #include <WebServer.h>
+#include <string>
+#include <sstream>
 #include "FFT.h"
 #include "FFT_signal.h"
-#define BAND 915E6 // Escolha a frequência
-
-DHTesp dht;
+#define BAND 115200 // Escolha a frequência
 
 String packet;
 
 const int RelePin = 23; // pino ao qual o Módulo Relé está conectado
-const int tensaoPin = 24;
-const int correntePin = 25;
-const int potenciaPin = 26;
+const int zmptPin = 13; // pino ZMPT
+const int acsPin = 12; // pino acs
+const int ssrPin = 2;
+const int potPin = 37;
+const float vref = 3.3;
+const float resolution = 4095.0;
 String statusRele = "OFF"; // variavel para ler dados recebidos pela serial
 String off = "OFF";
 
 fft_config_t *real_fft_plan = fft_init(FFT_N, FFT_REAL, FFT_FORWARD, fft_input, fft_output);
 
-int getCurrent()
+float getCurrent()
 {
-  int adc = analogRead(correntePin);
-  float voltage = adc * 5 / 1023.0;
+  int adc = analogRead(acsPin);
+  float voltage = adc * vref / resolution;
   float current = (voltage - 2.5) / 0.185;
   if (current < 0.16)
   {
@@ -31,19 +32,11 @@ int getCurrent()
   return current;
 }
 
-int getVoltage()
+float getVoltage()
 {
-  int adc = analogRead(correntePin);
-  float voltage = adc * 5 / 1023.0;
+  int adc = analogRead(zmptPin);
+  float voltage = adc * vref / resolution;
   return voltage;
-}
-
-void sendPacket()
-{
-  LoRa.beginPacket();
-  LoRa.print("Temperatura: ");
-  LoRa.print(currentTemp);
-  LoRa.endPacket();
 }
 
 int calcFTT()
@@ -73,22 +66,12 @@ void setup()
   Serial.begin(BAND);
   pinMode(RelePin, OUTPUT);   // seta o pino como saída
   digitalWrite(RelePin, LOW); // seta o pino com nivel logico baixo
-  pinMode(LED, OUTPUT);       // inicializa o LED
+  pinMode(ssrPin, OUTPUT);
 
-  Heltec.begin(true /*Habilita o Display*/, true /*Heltec.Heltec.Heltec.LoRa Disable*/, true /*Habilita debug Serial*/, true /*Habilita o PABOOST*/, BAND /*Frequência BAND*/);
+  ledcAttachPin(ssrPin, 0);
+  ledcSetup(0, 1000, 12);
 
-  Heltec.display->init();
-  Heltec.display->flipScreenVertically();
-  Heltec.display->setFont(ArialMT_Plain_16);
-  Heltec.display->clear();
-  Heltec.display->drawString(33, 5, "Iniciado");
-  Heltec.display->drawString(10, 30, "com Sucesso!");
-  Heltec.display->display();
   delay(1000);
-
-  dht.setup(17, DHTesp::DHT11); // inicializa o DHT no pino 17
-
-  currentTemp = dht.getTemperature();
 
   // Setup do Servidor Web
 
@@ -110,18 +93,17 @@ void setup()
 /******************* função em loop (loop) *********************/
 void loop()
 {
-  getTemp(); // Ler temperatura
-  Heltec.display->clear();
-  Heltec.display->setTextAlignment(TEXT_ALIGN_LEFT);
-  Heltec.display->setFont(ArialMT_Plain_16);
+  long int c = analogRead(zmptPin);
+  long int v = analogRead(acsPin);
+  long int potValue = analogRead(potPin);
 
-  Heltec.display->drawString(30, 5, "temperatura");
-  Heltec.display->drawString(33, 30, (String)currentTemp);
-  Heltec.display->drawString(78, 30, "°C");
-  Heltec.display->display();
-  sendPacket(); // Envia temperatura
+  std::ostringstream string;
+  string << "I:" << (float)c*(3.3/4095.0) << ", V:" << (float)v*(3.3/4095.0) << ", P:" << (float)potValue*(3.3/4095.0);
+  std::string output = string.str();
 
-  Serial.println(currentTemp);
+  Serial.println(output.c_str());
+
+  ledcWrite(0, potValue);
 
   // Codigo do Servidor
   server.handleClient();
@@ -156,7 +138,12 @@ void handle_OnRele()
 
 void handle_OnConnect()
 {
-  server.send(200, "text/plain", (String)currentTemp);
+  float c = getCurrent();
+  float v = getVoltage();
+  std::ostringstream string;
+  string << "I: " << c << ", V: " << v;
+  std::string output = string.str();
+  server.send(200, "text/plain", output.c_str());
 }
 
 void handle_NotFound()
